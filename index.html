@@ -56,10 +56,13 @@ button{font:inherit}
 .status.watch{background:var(--warn-bg);color:var(--warn)}
 
 /* day pagination */
-.pager{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
+.pager{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
 .pager button.arrow{background:none;border:1px solid var(--line);color:var(--ink);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;display:grid;place-items:center}
 .pager button.arrow:hover{border-color:var(--navy)}
 .pager button.arrow:disabled{opacity:.35;cursor:default}
+.pager button.copy{background:none;border:1px solid var(--line);color:var(--mut);border-radius:16px;padding:5px 11px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:4px}
+.pager button.copy:hover{border-color:var(--navy);color:var(--navy)}
+.pager button.copy.ok{border-color:var(--good);color:var(--good)}
 .days{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;padding:2px;min-width:0}
 .day{flex:0 0 auto;background:none;border:1px solid transparent;border-radius:8px;padding:5px 10px 4px;cursor:pointer;color:var(--mut);display:grid;gap:3px;text-align:left;min-width:64px}
 .day:hover{background:var(--paper-2);color:var(--ink)}
@@ -155,6 +158,8 @@ a.chip:hover{border-color:var(--navy)}
   .kpi{text-align:left}
 }
 @media (max-width:600px){
+  .pager{grid-template-columns:auto 1fr auto}
+  .pager button.copy{grid-column:1/-1;justify-self:end;margin:4px 0 0}
   body{padding-left:0;padding-right:0;padding-block:0}
   .page{border-radius:0;border-left:0;border-right:0;padding:18px 16px 20px}
   h1{font-size:23px}
@@ -179,6 +184,7 @@ a.chip:hover{border-color:var(--navy)}
       <button type="button" class="arrow" id="prev" aria-label="Previous day">‹</button>
       <div class="days" id="days" role="tablist"></div>
       <button type="button" class="arrow" id="next" aria-label="Next day">›</button>
+      <button type="button" class="copy" id="copy" title="Copy a link that opens this day">Link to this day</button>
     </nav>
   </header>
 
@@ -367,7 +373,7 @@ function tally(date){
   return {before:before,on:on,ip:ip,b:b,o:o,i:i};
 }
 
-function anchor(d){return 'oct-'+d.slice(8);}
+function anchor(d){return d;} // full date, e.g. #2026-10-20; a bare link always opens the latest day
 var daysEl=document.getElementById('days');
 DAYS.forEach(function(d,i){
   var dt=parse(d.date),t=tally(d.date);
@@ -425,12 +431,19 @@ function show(i,push){
   Array.prototype.forEach.call(daysEl.children,function(b,j){b.classList.toggle('on',j===i);b.setAttribute('aria-selected',j===i?'true':'false');});
   var on=daysEl.children[i]; if(on&&on.scrollIntoView&&push) on.scrollIntoView({block:'nearest',inline:'nearest'});
   document.getElementById('prev').disabled=i===0;document.getElementById('next').disabled=i===DAYS.length-1;
-  cur=i; if(push){try{history.replaceState(null,'',"#"+anchor(d.date));}catch(_){}}
+  cur=i;
 }
 var cur=DAYS.length-1;
 document.getElementById('prev').addEventListener('click',function(){if(cur>0)show(cur-1,true);});
 document.getElementById('next').addEventListener('click',function(){if(cur<DAYS.length-1)show(cur+1,true);});
 document.addEventListener('keydown',function(e){if(e.target.tagName==='INPUT')return;if(e.key==='ArrowLeft'&&cur>0)show(cur-1,true);if(e.key==='ArrowRight'&&cur<DAYS.length-1)show(cur+1,true);});
+var copyBtn=document.getElementById('copy');
+copyBtn.addEventListener('click',function(){
+  var url=location.href.split('#')[0]+'#'+anchor(DAYS[cur].date);
+  var done=function(){copyBtn.textContent='Copied';copyBtn.classList.add('ok');setTimeout(function(){copyBtn.textContent='Link to this day';copyBtn.classList.remove('ok');},1600);};
+  var fallback=function(){copyBtn.textContent=url;};
+  try{navigator.clipboard.writeText(url).then(done,fallback);}catch(_){fallback();}
+});
 var h=(location.hash||'').slice(1),start=DAYS.length-1;
 DAYS.forEach(function(d,i){if(anchor(d.date)===h)start=i;});
 show(start,false);
