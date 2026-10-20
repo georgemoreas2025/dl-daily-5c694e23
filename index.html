@@ -1,0 +1,441 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>AI Visibility Daily</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+</head>
+<body>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+<style>
+/* Layout: one screen per day. Header + overall progress across the top, narrative (left) beside progress-by-area (right), open asks along the bottom. Day pagination in the header. */
+:root{
+  --bg:#e9ecf0;--paper:#ffffff;--paper-2:#f4f6f8;--ink:#141c2b;--body:#3a4455;--mut:#6d7787;--line:#dde2e9;--line-2:#eef1f4;
+  --navy:#1b3a6b;--navy-ink:#ffffff;--navy-soft:#e4ebf6;--gold:#b0862c;--gold-soft:#f6efdd;
+  --good:#1f7a3f;--good-bg:#e3f2e8;--warn:#8a5a00;--warn-bg:#fbf0d6;--crit:#a52a2a;--crit-bg:#fae6e6;
+  --display:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --sans:"Libre Franklin","Franklin Gothic Medium","Segoe UI",system-ui,Helvetica,Arial,sans-serif;
+  --mono:Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1218;--paper:#161b23;--paper-2:#1d232d;--ink:#eef0f3;--body:#c6cbd3;--mut:#8e97a5;--line:#2c333e;--line-2:#242a34;
+  --navy:#8fb0e8;--navy-ink:#0e1218;--navy-soft:#1c2a40;--gold:#d6b260;--gold-soft:#332a15;
+  --good:#6fcf8f;--good-bg:#15301f;--warn:#f0c46a;--warn-bg:#352c12;--crit:#f09090;--crit-bg:#3a1c1c;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1218;--paper:#161b23;--paper-2:#1d232d;--ink:#eef0f3;--body:#c6cbd3;--mut:#8e97a5;--line:#2c333e;--line-2:#242a34;
+  --navy:#8fb0e8;--navy-ink:#0e1218;--navy-soft:#1c2a40;--gold:#d6b260;--gold-soft:#332a15;
+  --good:#6fcf8f;--good-bg:#15301f;--warn:#f0c46a;--warn-bg:#352c12;--crit:#f09090;--crit-bg:#3a1c1c;
+  color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--body);font:14px/1.5 var(--sans);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:18px 28px}
+.page{max-width:1160px;margin:0 auto;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:22px 28px 20px;display:grid;gap:16px}
+h1,h2,h3{margin:0;color:var(--ink);text-wrap:balance}
+h1{font:600 28px/1.1 var(--display);letter-spacing:-.01em}
+h2{font:700 11px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+p{margin:0}
+a{color:var(--navy);text-underline-offset:2px}
+a:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:4px}
+button{font:inherit}
+.num{font-variant-numeric:tabular-nums}
+.mut{color:var(--mut)}
+.eyebrow{font:700 11px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+
+/* header */
+.head{display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:start}
+.head .meta{color:var(--mut);margin-top:4px;font-size:13px}
+.head .meta b{color:var(--ink);font-weight:600}
+.status{display:inline-flex;align-items:center;gap:7px;font-weight:600;font-size:12.5px;padding:5px 11px;border-radius:20px;white-space:nowrap;margin-top:3px}
+.status:before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.status.ok{background:var(--good-bg);color:var(--good)}
+.status.setup{background:var(--navy-soft);color:var(--navy)}
+.status.watch{background:var(--warn-bg);color:var(--warn)}
+
+/* day pagination */
+.pager{grid-column:1/-1;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px 0}
+.pager button.arrow{background:none;border:1px solid var(--line);color:var(--ink);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1;display:grid;place-items:center}
+.pager button.arrow:hover{border-color:var(--navy)}
+.pager button.arrow:disabled{opacity:.35;cursor:default}
+.days{display:flex;gap:4px;overflow-x:auto;scrollbar-width:thin;padding:2px;min-width:0}
+.day{flex:0 0 auto;background:none;border:1px solid transparent;border-radius:8px;padding:5px 10px 4px;cursor:pointer;color:var(--mut);display:grid;gap:3px;text-align:left;min-width:64px}
+.day:hover{background:var(--paper-2);color:var(--ink)}
+.day .d{font:600 12.5px/1.1 var(--sans);white-space:nowrap}
+.day .w{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.day .bar{height:3px;border-radius:2px;background:var(--line);overflow:hidden}
+.day .bar i{display:block;height:100%;background:var(--navy)}
+.day.on{background:var(--navy);border-color:var(--navy);color:var(--navy-ink)}
+.day.on .bar{background:color-mix(in srgb,var(--navy-ink) 30%,transparent)}
+.day.on .bar i{background:var(--gold)}
+.day.sep{margin-left:10px;position:relative}
+.day.sep:before{content:"";position:absolute;left:-7px;top:8px;bottom:8px;border-left:1px solid var(--line)}
+
+/* overall progress */
+.overall{display:grid;grid-template-columns:1fr auto auto;gap:10px 28px;align-items:end}
+.overall .big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.overall .pct{font:600 40px/1 var(--display);color:var(--ink)}
+.overall .pct small{font:600 16px var(--sans);color:var(--mut);margin-left:4px}
+.overall .sub{font-size:13px;color:var(--mut)}
+.overall .sub b{color:var(--ink);font-weight:600}
+.track{grid-column:1/-1;position:relative;height:12px;background:var(--line-2);border-radius:6px;overflow:visible}
+.track .fill{position:absolute;left:0;top:0;bottom:0;background:var(--navy);border-radius:6px 0 0 6px}
+.track .fill.r{border-radius:6px}
+.track .gain{position:absolute;top:0;bottom:0;background:var(--gold)}
+.track .time{position:absolute;top:-5px;bottom:-5px;width:2px;background:var(--ink);opacity:.7}
+.track .time span{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:5px;white-space:nowrap;font-size:11px;color:var(--mut);font-weight:600;letter-spacing:.04em}
+.track .time.edge span{transform:none;left:auto;right:-2px}
+.kpi{text-align:right}
+.kpi .v{font:600 22px/1 var(--display);color:var(--ink)}
+.kpi .v em{font:600 12px var(--sans);color:var(--gold);font-style:normal;margin-left:4px}
+.kpi .k{font-size:11.5px;color:var(--mut);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+.legend{grid-column:1/-1;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--mut);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:5px}
+.legend .a i{background:var(--navy)}.legend .b i{background:var(--gold)}.legend .c i{width:2px;height:12px;background:var(--ink);opacity:.7;vertical-align:-2px}
+
+/* body */
+.body{display:grid;grid-template-columns:7fr 5fr;gap:24px;align-items:start}
+.body>div{min-width:0}
+.lead{font:500 17px/1.4 var(--display);color:var(--ink);margin:6px 0 14px;text-wrap:pretty}
+.focus{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px 3px 4px;border-radius:20px;border:1px solid var(--line);color:var(--ink);text-decoration:none;background:var(--paper)}
+.chip b{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--navy);color:var(--navy-ink);font:700 10.5px var(--sans)}
+a.chip:hover{border-color:var(--navy)}
+.done{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.done li{position:relative;padding-left:20px;font-size:13.5px;line-height:1.45}
+.done li:before{content:"";position:absolute;left:2px;top:7px;width:8px;height:8px;border-radius:2px;background:var(--navy)}
+.done li.ip:before{background:var(--gold)}
+.done li.ip .tag,.done li .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-left:4px}
+.done li b{color:var(--ink);font-weight:600}
+.done li a{white-space:nowrap;font-size:12.5px}
+.arc{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.arc div{background:var(--paper-2);border-radius:10px;padding:11px 14px 12px;min-width:0}
+.arc h2{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.arc h2 span{font-size:13px;color:var(--navy)}
+.arc p{font-size:13px;line-height:1.5;text-wrap:pretty}
+
+/* progress by area */
+.areas{display:grid;gap:5px;margin-top:8px}
+.area{display:grid;grid-template-columns:22px 1fr 48px;gap:8px;align-items:center;padding:3px 6px;border-radius:6px;text-decoration:none;color:inherit}
+.area:hover{background:var(--paper-2)}
+.area .id{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--paper-2);color:var(--ink);font:700 11px var(--sans);border:1px solid var(--line)}
+.area.hit .id{background:var(--gold);color:#fff;border-color:var(--gold)}
+.area.full .id{background:var(--navy);color:var(--navy-ink);border-color:var(--navy)}
+.area .nm{font-size:12.5px;color:var(--ink);font-weight:500;line-height:1.2;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.area .nm small{font-size:10.5px;color:var(--mut);font-weight:600;letter-spacing:.04em;white-space:nowrap}
+.area .nm small.gain{color:var(--gold)}
+.area .bar{height:7px;border-radius:4px;background:var(--line-2);position:relative;overflow:hidden;margin-top:4px}
+.area .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--navy);border-radius:4px}
+.area .bar i.g{background:var(--gold);border-radius:0 4px 4px 0}
+.area .bar i.ip{background:repeating-linear-gradient(135deg,var(--gold) 0 3px,transparent 3px 6px);opacity:.8;border-radius:0 4px 4px 0}
+.area .ct{font-size:12px;color:var(--mut);text-align:right;white-space:nowrap}
+.area .ct b{color:var(--ink);font-weight:600}
+.week{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mut);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.week b{color:var(--ink);font-weight:600}
+
+/* asks + foot */
+.asks{border-top:1px solid var(--line);padding-top:12px;display:grid;grid-template-columns:1fr auto;gap:12px 24px;align-items:start}
+.asks ul{list-style:none;margin:6px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:6px 18px}
+.asks li{font-size:12.5px;line-height:1.4;padding-left:14px;position:relative}
+.asks li:before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.asks li b{color:var(--ink);font-weight:600}
+.asks li.due:before{background:var(--crit)}
+.asks li a{white-space:nowrap}
+.asks .none{font-size:12.5px;margin-top:6px}
+.links{display:grid;gap:4px;font-size:12px;text-align:right;white-space:nowrap}
+.links a{color:var(--mut)}
+.links a:hover{color:var(--navy)}
+.foot{font-size:11.5px;color:var(--mut);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .body{grid-template-columns:1fr}
+  .overall{grid-template-columns:1fr 1fr}
+  .kpi{text-align:left}
+}
+@media (max-width:600px){
+  body{padding-left:0;padding-right:0;padding-block:0}
+  .page{border-radius:0;border-left:0;border-right:0;padding:18px 16px 20px}
+  h1{font-size:23px}
+  .head{grid-template-columns:1fr}
+  .arc{grid-template-columns:1fr}
+  .asks{grid-template-columns:1fr}
+  .links{text-align:left}
+  .overall .pct{font-size:32px}
+}
+@media (prefers-reduced-motion:no-preference){.track .fill,.area .bar i{transition:width .35s ease}}
+</style>
+
+<div class="page" id="app">
+  <header class="head">
+    <div>
+      <div class="eyebrow">AI Visibility Program · daily report</div>
+      <h1 id="h-date">Loading…</h1>
+      <div class="meta" id="h-meta"></div>
+    </div>
+    <span class="status ok" id="h-status">On track</span>
+    <nav class="pager" aria-label="Day">
+      <button type="button" class="arrow" id="prev" aria-label="Previous day">‹</button>
+      <div class="days" id="days" role="tablist"></div>
+      <button type="button" class="arrow" id="next" aria-label="Next day">›</button>
+    </nav>
+  </header>
+
+  <section class="overall" aria-label="Overall progress">
+    <div class="big">
+      <span class="pct num" id="o-pct">0%</span>
+      <span class="sub" id="o-sub"></span>
+    </div>
+    <div class="kpi"><div class="v num" id="o-today"></div><div class="k">tickets closed this day</div></div>
+    <div class="kpi"><div class="v num" id="o-time"></div><div class="k">of 90 days elapsed</div></div>
+    <div class="track" aria-hidden="true"><div class="fill" id="o-fill"></div><div class="gain" id="o-gain"></div><div class="time" id="o-mark"><span id="o-mark-l"></span></div></div>
+    <div class="legend"><span class="a"><i></i>Done before this day</span><span class="b"><i></i>Closed this day</span><span class="c"><i></i>Calendar position, day of 90</span></div>
+  </section>
+
+  <section class="body">
+    <div>
+      <h2>Where we attacked</h2>
+      <div class="focus" id="focus"></div>
+      <p class="lead" id="lead"></p>
+      <h2>Done this day</h2>
+      <ul class="done" id="done"></ul>
+      <div class="arc">
+        <div><h2><span>↑</span>Built on the day before</h2><p id="built"></p></div>
+        <div><h2><span>→</span>Opens up next</h2><p id="opens"></p></div>
+      </div>
+    </div>
+    <div>
+      <h2>Progress by area</h2>
+      <div class="areas" id="areas"></div>
+      <div class="week" id="week"></div>
+    </div>
+  </section>
+
+  <section class="asks">
+    <div>
+      <h2 id="asks-h">Needed from the team</h2>
+      <ul id="asks"></ul>
+      <p class="none" id="asks-none" hidden>No open decisions were recorded for this day.</p>
+    </div>
+    <div class="links" id="links"></div>
+  </section>
+
+  <div class="foot">
+    <span>Progress counts Jira project DL: a ticket is done when its status is Done. Percentages use the plan as it stands today (<span id="f-total"></span> tickets); earlier days are measured against the same total.</span>
+    <span>This link is stable and updated each working day.</span>
+  </div>
+</div>
+
+<script>
+(function(){
+var JIRA='https://dolmanlaw.atlassian.net/browse/';
+var WIKI='https://dolmanlaw.atlassian.net/wiki/spaces/~712020df2875a3453848038c7779f47815d971/pages/';
+var START=new Date(2026,8,28); // Sep 28, 2026 = day 1
+var TOTAL_DAYS=90, TOTAL_WEEKS=13;
+
+var EPICS=[
+  {id:'0',name:'Foundation: tools, access, baseline',total:33,jira:'DL-81',page:'9207811'},
+  {id:'A',name:'Setup and governance',total:8,jira:'DL-10',page:'7766017'},
+  {id:'B',name:'Measurement',total:8,jira:'DL-11',page:'7798785'},
+  {id:'C',name:'Technical SEO fixes',total:17,jira:'DL-12',page:'7831553'},
+  {id:'D',name:'Content and on-page',total:9,jira:'DL-13',page:'7864321'},
+  {id:'E',name:'Firm entity and schema',total:6,jira:'DL-14',page:'7897089'},
+  {id:'F',name:'Local listings and citations',total:9,jira:'DL-15',page:'7929857'},
+  {id:'G',name:'Lead capture',total:5,jira:'DL-16',page:'7962625'},
+  {id:'H',name:'AI visibility',total:4,jira:'DL-17',page:'7995393'},
+  {id:'I',name:'New site and brand',total:11,jira:'DL-18',page:'8028161'},
+  {id:'J',name:'Legal knowledge graph',total:10,jira:'DL-115',page:'10158081'}
+];
+
+// Every Done ticket: epic and the day it closed (Jira resolution date, or done_on for the Foundation record).
+var DONE=[
+  ['0','2026-09-30',1],['0','2026-10-02',2],['0','2026-10-09',1],['0','2026-10-12',1],
+  ['0','2026-10-14',12],['0','2026-10-15',7],['0','2026-10-16',1],['0','2026-10-19',5],['0','2026-10-20',3],
+  ['A','2026-10-19',1],['I','2026-10-19',2],
+  ['B','2026-10-20',1],['J','2026-10-20',1]
+];
+// Tickets In Progress, with the day they started.
+var INPROG=[['A','2026-10-20',2]];
+
+var DAYS=[
+ {date:'2026-09-30',status:['setup','Setting up'],recon:true,focus:['0'],
+  lead:'The program owner has the accounts and access the work depends on; the program starts from a known position.',
+  done:['<b>Accounts and access for the program owner</b> (DL-82).'],
+  built:'Program start on Sep 28: the goal and the 13-week frame were set for this first week.',
+  opens:'An inventory of the three sites, the vendors around them and the tools already in place.',
+  asks:[]},
+ {date:'2026-10-02',status:['setup','Setting up'],recon:true,focus:['0'],
+  lead:'Scope is fixed: three sites, the vendors around them, and a 13-week frame ending Dec 27.',
+  done:['<b>Inventory of what exists</b>: three sites, vendors and tools (DL-83).','<b>Goal and 13-week frame set</b> with the managing partner (DL-84).'],
+  built:'Access from day one made the inventory possible without waiting on anyone.',
+  opens:'Choosing the toolchain and sending the requests that take days: IT unblocks, API keys, Google Cloud.',
+  asks:[]},
+ {date:'2026-10-09',status:['setup','Setting up'],recon:true,focus:['0'],
+  lead:'Toolchain chosen; the slow requests (IT unblocks, API keys) are in flight.',
+  done:['<b>Toolchain chosen and long-lead requests sent</b> (DL-85).'],
+  built:'The inventory showed which systems had to be reached: WP Engine, GitHub, Google, BrightLocal, Profound.',
+  opens:'Writing the build guide while the requests clear.',
+  asks:[]},
+ {date:'2026-10-12',status:['setup','Setting up'],focus:['0'],
+  lead:'The AI-Visibility Engine build guide is written: the sequence every later day follows.',
+  done:['<b>AI-Visibility Engine build guide</b> (DL-86).'],
+  built:'The toolchain decisions made the guide concrete rather than a wish list.',
+  opens:'Installing the workspace and connecting every data source on one day.',
+  asks:[]},
+ {date:'2026-10-14',status:['ok','On track'],focus:['0'],
+  lead:'All three sites baselined and Google data connected in a single day; first findings and the first leadership brief delivered.',
+  done:[
+   '<b>Baseline snapshot of all 3 sites</b>: 2,436 pages, in the site-ops repo (DL-92).',
+   '<b>16 months of Search Console and GA4 history pulled</b>; top 72 dolmanlaw URLs inspected; baseline findings written (DL-93).',
+   '<b>GA4 linked to BigQuery</b> for all three properties (DL-95).',
+   '<b>BrightLocal citation snapshot</b> and the listing fix list (DL-96).',
+   '<b>Vendor rebuild compared with the live site</b> (DL-97). <b>First leadership brief</b> (DL-94).',
+   'Six setup tickets closed: pipeline plan, Claude Code workspace, GitHub CLI, Google Cloud project, local tooling, Atlassian connector (DL-87, DL-88, DL-89, DL-90, DL-91, DL-98).'],
+  built:'The build guide fixed the order, so setup and data pulls ran back to back instead of waiting on each other.',
+  opens:'The findings become a ranked fix list. IT unblocks and colleague access are the only things in the way.',
+  asks:[]},
+ {date:'2026-10-15',status:['ok','On track'],focus:['0'],
+  lead:'WP Engine staging connected to GitHub; the fix list T-01 to T-14 and the handoff documents written; this report gets its stable link.',
+  done:[
+   '<b>Fix list T-01 to T-14</b>, session handoff and learnings (DL-101).',
+   '<b>Daily one-page report</b> with a stable link (DL-102).',
+   '<b>IT unblocked Node.js, npm and Clarity</b>; Node installed (DL-99). <b>Colleague access</b> and setup guide (DL-100).',
+   '<b>New-brand preview mirrored locally</b> (DL-103). <b>Intake form vs chatbot analysis</b> (DL-104). <b>ChatGPT ads research</b> (DL-105).'],
+  built:'Yesterday’s findings, ranked by traffic at stake, gave the fix list its order.',
+  opens:'A plan that can be tracked in Jira, and design work on the new brand while access requests clear.',
+  asks:[]},
+ {date:'2026-10-16',status:['ok','On track'],focus:['0'],
+  lead:'Design exploration starts: the Dolman Preview Studio with the first concept pages.',
+  done:['<b>Dolman Preview Studio</b>: design exploration opened (DL-106).'],
+  built:'The brand preview mirrored on Oct 15 supplied the brand’s own assets.',
+  opens:'The reviewer’s homepage inside the studio and a published studio for review.',
+  asks:[]},
+ {date:'2026-10-19',status:['ok','On track'],focus:['0','A','I'],
+  lead:'The 90-day plan is filed: 9 epics and 71 tickets in Jira, one Confluence page per epic, plus the Foundation record of how the program was stood up.',
+  done:[
+   '<b>90-day plan written and filed</b>: epics A to I, tickets DL-19 to DL-80, one Confluence page each (DL-109).',
+   '<b>Jira and Confluence connected</b> to the working environment (DL-107).',
+   '<b>Production approvers confirmed</b> (DL-19).',
+   '<b>Vendor told the rebuild does not launch as-is</b>; scorecard and launch gates sent (DL-72). New-brand preview token refreshed and hosting decided (DL-9).',
+   '<b>Three live sites scraped</b> into every studio design (DL-110). <b>SEO technical review R28</b> of the live sites (DL-111). Vendor staging rebuild mirrored in full (DL-108).'],
+  built:'The fix list, handoff documents and vendor scorecard from Oct 14 and 15 were the raw material; the plan turned them into owned, dated tickets.',
+  opens:'From here every day executes tickets. The R28 review is ready to be filed as tickets, and the approver decision unlocks the production deploy path.',
+  asks:[],log:'8323073'},
+ {date:'2026-10-20',status:['ok','On track'],focus:['A','B','C','J','0'],
+  lead:'The production deploy path is built and the code now lives in the firm’s GitHub; GA4 data is confirmed landing in BigQuery; the legal knowledge graph starts at 3,383 nodes.',
+  done:[
+   '<b>GA4 to BigQuery check passed</b>: daily tables for all 3 sites since Oct 14 (DL-29). Finding: tables expire after 60 days until Cloud billing is attached; the first delete on Dec 14.',
+   '<b>Legal knowledge graph scaffolded</b>: 3,383 nodes, 30,879 links, 1,372 verified against sources (DL-122). Epic J added with 10 tickets (DL-115).',
+   '<b>WP Engine production and staging access set up</b>: deploy user on all 3 sites, promote workflow with dry run and named approvers (DL-20). <span class="tag">in progress</span>',
+   '<b>Repo merged into the firm’s GitHub organisation</b> (DL-22). <span class="tag">in progress</span>',
+   '<b>R28 technical SEO review filed as six tickets</b> C12 to C17 (DL-116 to DL-121).',
+   '<b>Design Studio published</b>: 33 designs, the reviewer’s homepage one-to-one and the Contour variant, visual regression tools (DL-112, DL-113). <b>Vendor access removed</b> from WordPress and Google (DL-114).',
+   '<b>Decisions</b>: two named production approvers; every production change is dry run, explicit yes, then apply.'],
+  built:'Yesterday’s plan gave today its tickets. The approver decision let the production deploy path be built, and the R28 review became six tickets in epic C.',
+  opens:'Attach Cloud billing (A5) and the GA4 history is safe. Finish the code deploy workflow (A3) and the first fixes C3, C4 and C5 can go to staging. The knowledge graph moves to fact-checking its 747 flagged nodes.',
+  asks:[
+   {who:'George',what:'attach Cloud billing with a $10 alert',key:'DL-23',due:'before Dec 14, or the first GA4 tables delete'},
+   {who:'Matt',what:'confirm which offices are current',key:'DL-60'},
+   {who:'George',what:'add the lawsuitlegalnews.com Domain property in Search Console (one DNS record)',key:'DL-27'},
+   {who:'George + Matt',what:'agree the production calendar and holiday freeze',key:'DL-25'},
+   {who:'George + intake lead',what:'define “lead that onboards” for the weekly count',key:'DL-31'},
+   {who:'Matt',what:'decide the hidden out-of-state pages and the redirected mass-tort pages',key:'DL-40'}],
+  log:'9666561'}
+];
+
+// Tickets due in the current week (week 4, Oct 19 to 25): done / in progress / total.
+var WEEK_DUE={4:{done:5,ip:2,total:18}};
+
+function parse(s){var p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function dayNo(d){return Math.round((d-START)/864e5)+1;}
+function weekNo(d){return Math.floor((dayNo(d)-1)/7)+1;}
+var DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var MONL=['January','February','March','April','May','June','July','August','September','October','November','December'];
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function linkify(html){return html.replace(/\b(DL-\d+)\b/g,function(m){return '<a href="'+JIRA+m+'" target="_blank" rel="noopener">'+m+'</a>';});}
+var TOTAL=EPICS.reduce(function(a,e){return a+e.total;},0);
+
+function tally(date){
+  // done per epic strictly before the day, on the day, and in progress as of the day
+  var before={},on={},ip={};
+  EPICS.forEach(function(e){before[e.id]=0;on[e.id]=0;ip[e.id]=0;});
+  DONE.forEach(function(r){ if(r[1]<date) before[r[0]]+=r[2]; else if(r[1]===date) on[r[0]]+=r[2]; });
+  INPROG.forEach(function(r){ if(r[1]<=date) ip[r[0]]+=r[2]; });
+  var b=0,o=0,i=0;EPICS.forEach(function(e){b+=before[e.id];o+=on[e.id];i+=ip[e.id];});
+  return {before:before,on:on,ip:ip,b:b,o:o,i:i};
+}
+
+function anchor(d){return 'oct-'+d.slice(8);}
+var daysEl=document.getElementById('days');
+DAYS.forEach(function(d,i){
+  var dt=parse(d.date),t=tally(d.date);
+  var b=document.createElement('button');b.type='button';b.className='day';b.setAttribute('role','tab');b.dataset.i=i;
+  var prevW=i?weekNo(parse(DAYS[i-1].date)):0; if(i&&weekNo(dt)!==prevW) b.classList.add('sep');
+  b.innerHTML='<span class="d">'+MON[dt.getMonth()]+' '+dt.getDate()+'</span><span class="w">wk '+weekNo(dt)+' · day '+dayNo(dt)+'</span><span class="bar"><i style="width:'+Math.min(100,t.o*8)+'%"></i></span>';
+  b.addEventListener('click',function(){show(i,true);});
+  daysEl.appendChild(b);
+});
+
+function show(i,push){
+  var d=DAYS[i],dt=parse(d.date),t=tally(d.date);
+  var dn=dayNo(dt),wk=weekNo(dt);
+  document.getElementById('h-date').textContent=DOW[dt.getDay()]+', '+MONL[dt.getMonth()]+' '+dt.getDate()+', '+dt.getFullYear();
+  document.getElementById('h-meta').innerHTML='<b>Day '+dn+' of '+TOTAL_DAYS+'</b> · week '+wk+' of '+TOTAL_WEEKS+' · dolmanlaw.com · fileabuselawsuit.com · lawsuitlegalnews.com'+(d.recon?' · <span class="mut">record reconstructed from files and logs</span>':'');
+  var st=document.getElementById('h-status');st.className='status '+d.status[0];st.textContent=d.status[1];
+
+  var pctB=t.b/TOTAL*100,pctO=t.o/TOTAL*100,pct=Math.round(pctB+pctO),tpct=dn/TOTAL_DAYS*100;
+  document.getElementById('o-pct').innerHTML=pct+'%<small>complete</small>';
+  document.getElementById('o-sub').innerHTML='<b>'+(t.b+t.o)+' of '+TOTAL+'</b> tickets done'+(t.i?' · <b>'+t.i+'</b> in progress':'')+' · work is '+(pct>=Math.round(tpct)?'ahead of':'behind')+' the calendar by '+Math.abs(pct-Math.round(tpct))+' points';
+  document.getElementById('o-today').innerHTML=t.o+(t.o?'<em>+'+(Math.round(pctO*10)/10)+' pts</em>':'');
+  document.getElementById('o-time').textContent=Math.round(tpct)+'%';
+  var fill=document.getElementById('o-fill');fill.style.width=pctB+'%';fill.className='fill'+(t.o?'':' r');
+  var gain=document.getElementById('o-gain');gain.style.left=pctB+'%';gain.style.width=pctO+'%';gain.style.borderRadius=pctB?'0 6px 6px 0':'6px';
+  var mark=document.getElementById('o-mark');mark.style.left='calc('+tpct+'% - 1px)';mark.className='time'+(tpct>88?' edge':'');
+  document.getElementById('o-mark-l').textContent='Day '+dn;
+
+  document.getElementById('focus').innerHTML=d.focus.map(function(id){var e=EPICS.filter(function(x){return x.id===id;})[0];return '<a class="chip" href="'+JIRA+e.jira+'" target="_blank" rel="noopener"><b>'+e.id+'</b>'+esc(e.name)+'</a>';}).join('');
+  document.getElementById('lead').textContent=d.lead;
+  document.getElementById('done').innerHTML=d.done.map(function(h){return '<li'+(/class="tag"/.test(h)?' class="ip"':'')+'>'+linkify(h)+'</li>';}).join('');
+  document.getElementById('built').textContent=d.built;
+  document.getElementById('opens').textContent=d.opens;
+
+  document.getElementById('areas').innerHTML=EPICS.map(function(e){
+    var b=t.before[e.id],o=t.on[e.id],ip=t.ip[e.id],done=b+o,full=done>=e.total;
+    var w=function(n){return (n/e.total*100)+'%';};
+    return '<a class="area'+(o?' hit':'')+(full?' full':'')+'" href="'+WIKI+e.page+'" target="_blank" rel="noopener" title="Epic page in Confluence">'
+      +'<span class="id">'+e.id+'</span>'
+      +'<span><span class="nm">'+esc(e.name)+(o?'<small class="gain">+'+o+' this day</small>':(ip?'<small>'+ip+' in progress</small>':(full?'<small>complete</small>':'')))+'</span>'
+      +'<span class="bar"><i style="width:'+w(done)+'"></i>'+(o?'<i class="g" style="left:'+w(b)+';width:'+w(o)+'"></i>':'')+(ip?'<i class="ip" style="left:'+w(done)+';width:'+w(ip)+'"></i>':'')+'</span></span>'
+      +'<span class="ct num"><b>'+done+'</b>/'+e.total+'</span></a>';
+  }).join('');
+  var wd=WEEK_DUE[wk];
+  document.getElementById('week').innerHTML=wd?'<span>Due this week (wk '+wk+')</span><span><b>'+wd.done+' of '+wd.total+'</b> done · '+wd.ip+' in progress</span>':'<span>Week '+wk+' of '+TOTAL_WEEKS+'</span><span>'+(wk<=3?'Foundation phase':'')+'</span>';
+
+  var asks=document.getElementById('asks'),none=document.getElementById('asks-none');
+  asks.innerHTML=d.asks.map(function(a){return '<li'+(a.due?' class="due"':'')+'><b>'+esc(a.who)+':</b> '+esc(a.what)+(a.due?', '+esc(a.due):'')+' <a href="'+JIRA+a.key+'" target="_blank" rel="noopener">'+a.key+'</a></li>';}).join('');
+  none.hidden=!!d.asks.length;
+  document.getElementById('links').innerHTML='<a href="https://dolmanlaw.atlassian.net/jira/software/projects/DL/boards" target="_blank" rel="noopener">Jira board DL</a>'
+    +'<a href="'+WIKI+'7634945" target="_blank" rel="noopener">90-day plan</a>'
+    +'<a href="'+WIKI+'7700481" target="_blank" rel="noopener">Decisions needed</a>'
+    +(d.log?'<a href="'+WIKI+d.log+'" target="_blank" rel="noopener">Session log, '+MON[dt.getMonth()]+' '+dt.getDate()+'</a>':'<a href="'+WIKI+'9207811" target="_blank" rel="noopener">Foundation record</a>');
+  document.getElementById('f-total').textContent=TOTAL;
+
+  Array.prototype.forEach.call(daysEl.children,function(b,j){b.classList.toggle('on',j===i);b.setAttribute('aria-selected',j===i?'true':'false');});
+  var on=daysEl.children[i]; if(on&&on.scrollIntoView&&push) on.scrollIntoView({block:'nearest',inline:'nearest'});
+  document.getElementById('prev').disabled=i===0;document.getElementById('next').disabled=i===DAYS.length-1;
+  cur=i; if(push){try{history.replaceState(null,'',"#"+anchor(d.date));}catch(_){}}
+}
+var cur=DAYS.length-1;
+document.getElementById('prev').addEventListener('click',function(){if(cur>0)show(cur-1,true);});
+document.getElementById('next').addEventListener('click',function(){if(cur<DAYS.length-1)show(cur+1,true);});
+document.addEventListener('keydown',function(e){if(e.target.tagName==='INPUT')return;if(e.key==='ArrowLeft'&&cur>0)show(cur-1,true);if(e.key==='ArrowRight'&&cur<DAYS.length-1)show(cur+1,true);});
+var h=(location.hash||'').slice(1),start=DAYS.length-1;
+DAYS.forEach(function(d,i){if(anchor(d.date)===h)start=i;});
+show(start,false);
+})();
+</script>
+
+</body>
+</html>
