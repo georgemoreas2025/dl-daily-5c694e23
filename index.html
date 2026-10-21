@@ -401,8 +401,7 @@ function show(i){
     +(pv.indexOf('kb')>=0?'<a class="live" href="'+KB+'" target="_blank" rel="noopener">Legal knowledge base</a>':'')
     +'<a href="'+WIKI+'7634945" target="_blank" rel="noopener">The 90-day plan</a>'
     +'<a href="'+WIKI+'7700481" target="_blank" rel="noopener">Decisions needed</a>'
-    +'<a href="https://dolmanlaw.atlassian.net/jira/software/projects/DL/boards/2" target="_blank" rel="noopener">Task tracker</a>'
-    +(d.log?'<a href="'+WIKI+d.log+'" target="_blank" rel="noopener">Work log, '+MON[dt.getMonth()]+' '+dt.getDate()+'</a>':'<a href="'+WIKI+'9207811" target="_blank" rel="noopener">How the program was set up</a>');
+    +'<a href="https://dolmanlaw.atlassian.net/jira/software/projects/DL/boards/2" target="_blank" rel="noopener">Task tracker</a>';
   document.getElementById('f-total').textContent=TOTAL;
 
   Array.prototype.forEach.call(daysEl.children,function(b,j){b.classList.toggle('on',j===i);b.setAttribute('aria-selected',j===i?'true':'false');});
